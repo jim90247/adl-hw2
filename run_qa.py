@@ -586,8 +586,9 @@ def main(args_dict: Union[Dict, None] = None):
         trainer.save_metrics("train", metrics)
         trainer.save_state()
 
-    # Evaluation
-    if training_args.do_eval:
+    # Unless we are not training, there's no need to run evaluation again here.
+    # Evaluation will be run after each training epoch.
+    if training_args.do_eval and not training_args.do_train:
         logger.info("*** Evaluate ***")
         metrics = trainer.evaluate()
 
