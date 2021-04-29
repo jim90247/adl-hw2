@@ -22,7 +22,7 @@ import logging
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Dict, Optional, Union
 
 from datasets import load_dataset, load_metric
 
@@ -194,13 +194,16 @@ class DataTrainingArguments:
                 assert extension in ["csv", "json"], "`test_file` should be a csv or a json file."
 
 
-def main():
+def main(args_dict: Union[Dict, None] = None):
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
-    if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
+    if args_dict is not None:
+        # Allow main function be called with arguments from other python codes
+        model_args, data_args, training_args = parser.parse_dict(args_dict)
+    elif len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
         # let's parse it to get our arguments.
         model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
@@ -258,18 +261,25 @@ def main():
         # Downloading and loading a dataset from the hub.
         datasets = load_dataset(data_args.dataset_name, data_args.dataset_config_name)
     else:
-        data_files = {}
+        # Training and validation datasets have answers, but test dataset does not.
+        # Therefore, we load them seperately, otherwise `load_dataset` will report errors.
+        data_files_with_answers = {}
         if data_args.train_file is not None:
-            data_files["train"] = data_args.train_file
+            data_files_with_answers["train"] = data_args.train_file
             extension = data_args.train_file.split(".")[-1]
-
         if data_args.validation_file is not None:
-            data_files["validation"] = data_args.validation_file
+            data_files_with_answers["validation"] = data_args.validation_file
             extension = data_args.validation_file.split(".")[-1]
+
+        datasets_with_answers = load_dataset(extension, data_files=data_files_with_answers, field="data")
+
+        data_files_without_answers = {}
         if data_args.test_file is not None:
-            data_files["test"] = data_args.test_file
+            data_files_without_answers["test"] = data_args.test_file
             extension = data_args.test_file.split(".")[-1]
-        datasets = load_dataset(extension, data_files=data_files, field="data")
+        datasets_without_answers = load_dataset(extension, data_files=data_files_without_answers, field="data")
+
+        datasets = {**datasets_with_answers, **datasets_without_answers}
     # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
     # https://huggingface.co/docs/datasets/loading_datasets.html.
 
@@ -590,19 +600,7 @@ def main():
     # Prediction
     if training_args.do_predict:
         logger.info("*** Predict ***")
-        results = trainer.predict(test_dataset, test_examples)
-        metrics = results.metrics
-
-        max_test_samples = data_args.max_test_samples if data_args.max_test_samples is not None else len(test_dataset)
-        metrics["test_samples"] = min(max_test_samples, len(test_dataset))
-
-        trainer.log_metrics("test", metrics)
-        trainer.save_metrics("test", metrics)
-
-
-def _mp_fn(index):
-    # For xla_spawn (TPUs)
-    main()
+        trainer.predict(test_dataset, test_examples)
 
 
 if __name__ == "__main__":

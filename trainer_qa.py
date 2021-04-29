@@ -16,16 +16,9 @@
 A subclass of `Trainer` specific to Question-Answering tasks
 """
 
-from transformers import Trainer, is_datasets_available, is_torch_tpu_available
+import datasets
+from transformers import Trainer
 from transformers.trainer_utils import PredictionOutput
-
-
-if is_datasets_available():
-    import datasets
-
-if is_torch_tpu_available():
-    import torch_xla.core.xla_model as xm
-    import torch_xla.debug.metrics as met
 
 
 class QuestionAnsweringTrainer(Trainer):
@@ -66,10 +59,6 @@ class QuestionAnsweringTrainer(Trainer):
         else:
             metrics = {}
 
-        if self.args.tpu_metrics_debug or self.args.debug:
-            # tpu-comment: Logging debug metrics for PyTorch/XLA (compile, execute times, ops, etc.)
-            xm.master_print(met.metrics_report())
-
         self.control = self.callback_handler.on_evaluate(self.args, self.state, self.control, metrics)
         return metrics
 
@@ -99,6 +88,5 @@ class QuestionAnsweringTrainer(Trainer):
             test_dataset.set_format(type=test_dataset.format["type"], columns=list(test_dataset.features.keys()))
 
         eval_preds = self.post_process_function(test_examples, test_dataset, output.predictions, "test")
-        metrics = self.compute_metrics(eval_preds)
-
-        return PredictionOutput(predictions=eval_preds.predictions, label_ids=eval_preds.label_ids, metrics=metrics)
+        # Test data has no label.
+        return PredictionOutput(predictions=eval_preds.predictions, label_ids=eval_preds.label_ids, metrics=None)
