@@ -24,9 +24,10 @@ import sys
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Union
 
-from datasets import load_dataset, load_metric
+from datasets import load_dataset
 
 import transformers
+import eval as hw2_eval
 from trainer_qa import QuestionAnsweringTrainer
 from transformers import (
     AutoConfig,
@@ -547,10 +548,22 @@ def main(args_dict: Union[Dict, None] = None):
         references = [{"id": ex["id"], "answers": ex[answer_column_name]} for ex in examples]
         return EvalPrediction(predictions=formatted_predictions, label_ids=references)
 
-    metric = load_metric("squad_v2" if data_args.version_2_with_negative else "squad")
+    def compute_metrics(eval_predictions: EvalPrediction) -> Dict[str, float]:
+        """Compute EM and F1 scores using evaluation function provided by TA.
 
-    def compute_metrics(p: EvalPrediction):
-        return metric.compute(predictions=p.predictions, references=p.label_ids)
+        Args:
+            eval_predictions (EvalPrediction): Evaluation prediction
+
+        Returns:
+            Dict[str, float]: Computed metrics
+        """
+        predict_texts = {p['id']: p['prediction_text'] for p in eval_predictions.predictions}
+        answer_texts = {a['id']: {'answers': a['answers']['text']} for a in eval_predictions.label_ids}
+
+        # Use SpaCy tokenizer
+        hw2_tokenizer = hw2_eval.Tokenizer()
+        hw2_metrics = hw2_eval.compute_metrics(answer_texts, predict_texts, hw2_tokenizer)
+        return {'exact_match': hw2_metrics['em'], 'f1': hw2_metrics['f1']}
 
     # Initialize our Trainer
     trainer = QuestionAnsweringTrainer(
