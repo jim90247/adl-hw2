@@ -38,7 +38,6 @@ def hw2_to_squad(dataset: List[Dict], contexts: List[str], include_answers: bool
         squad_entry = {
             'id': entry['id'],
             'question': entry['question'],
-            'title': '',  # not in use
             'context': contexts[entry['relevant']],
             'answers': {
                 'answer_start': [],
@@ -68,7 +67,7 @@ def main(args):
         squad_dataset = random.sample(squad_dataset, k=args.count)
 
     with open(args.output, 'w', encoding='utf-8') as f:
-        json.dump({"data": squad_dataset}, f, ensure_ascii=False)
+        json.dump({"data": squad_dataset}, f, ensure_ascii=False, indent=2)
 
 
 if __name__ == '__main__':

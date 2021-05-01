@@ -267,18 +267,15 @@ def main(args_dict: Union[Dict, None] = None):
         data_files_with_answers = {}
         if data_args.train_file is not None:
             data_files_with_answers["train"] = data_args.train_file
-            extension = data_args.train_file.split(".")[-1]
         if data_args.validation_file is not None:
             data_files_with_answers["validation"] = data_args.validation_file
-            extension = data_args.validation_file.split(".")[-1]
 
-        datasets_with_answers = load_dataset(extension, data_files=data_files_with_answers, field="data")
+        datasets_with_answers = load_dataset('json', data_files=data_files_with_answers, field="data") if len(data_files_with_answers) > 0 else {}
 
         data_files_without_answers = {}
         if data_args.test_file is not None:
             data_files_without_answers["test"] = data_args.test_file
-            extension = data_args.test_file.split(".")[-1]
-        datasets_without_answers = load_dataset(extension, data_files=data_files_without_answers, field="data")
+        datasets_without_answers = load_dataset('json', data_files=data_files_without_answers, field="data") if len(data_files_without_answers) > 0 else {}
 
         datasets = {**datasets_with_answers, **datasets_without_answers}
     # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
