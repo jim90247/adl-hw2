@@ -318,15 +318,6 @@ def main(args_dict: Union[Dict, None] = None):
 
     # Preprocessing the datasets.
     # Preprocessing is slighlty different for training and evaluation.
-    if training_args.do_train:
-        column_names = datasets["train"].column_names
-    elif training_args.do_eval:
-        column_names = datasets["validation"].column_names
-    else:
-        column_names = datasets["test"].column_names
-    question_column_name = "question" if "question" in column_names else column_names[0]
-    context_column_name = "context" if "context" in column_names else column_names[1]
-    answer_column_name = "answers" if "answers" in column_names else column_names[2]
 
     # Padding side determines if we do (question|context) or (context|question).
     pad_on_right = tokenizer.padding_side == "right"
@@ -344,8 +335,8 @@ def main(args_dict: Union[Dict, None] = None):
         # in one example possible giving several features when a context is long, each of those features having a
         # context that overlaps a bit the context of the previous feature.
         tokenized_examples = tokenizer(
-            examples[question_column_name if pad_on_right else context_column_name],
-            examples[context_column_name if pad_on_right else question_column_name],
+            examples['question' if pad_on_right else 'context'],
+            examples['context' if pad_on_right else 'question'],
             truncation="only_second" if pad_on_right else "only_first",
             max_length=max_seq_length,
             stride=data_args.doc_stride,
@@ -375,7 +366,7 @@ def main(args_dict: Union[Dict, None] = None):
 
             # One example can give several spans, this is the index of the example containing this span of text.
             sample_index = sample_mapping[i]
-            answers = examples[answer_column_name][sample_index]
+            answers = examples['answers'][sample_index]
             # If no answers are given, set the cls_index as answer.
             if len(answers["answer_start"]) == 0:
                 tokenized_examples["start_positions"].append(cls_index)
@@ -423,7 +414,7 @@ def main(args_dict: Union[Dict, None] = None):
             prepare_train_features,
             batched=True,
             num_proc=data_args.preprocessing_num_workers,
-            remove_columns=column_names,
+            remove_columns=datasets["train"].column_names,
             load_from_cache_file=not data_args.overwrite_cache,
         )
         if data_args.max_train_samples is not None:
@@ -436,8 +427,8 @@ def main(args_dict: Union[Dict, None] = None):
         # in one example possible giving several features when a context is long, each of those features having a
         # context that overlaps a bit the context of the previous feature.
         tokenized_examples = tokenizer(
-            examples[question_column_name if pad_on_right else context_column_name],
-            examples[context_column_name if pad_on_right else question_column_name],
+            examples['question' if pad_on_right else 'context'],
+            examples['context' if pad_on_right else 'question'],
             truncation="only_second" if pad_on_right else "only_first",
             max_length=max_seq_length,
             stride=data_args.doc_stride,
@@ -484,7 +475,7 @@ def main(args_dict: Union[Dict, None] = None):
             prepare_validation_features,
             batched=True,
             num_proc=data_args.preprocessing_num_workers,
-            remove_columns=column_names,
+            remove_columns=datasets["validation"].column_names,
             load_from_cache_file=not data_args.overwrite_cache,
         )
         if data_args.max_val_samples is not None:
@@ -503,7 +494,7 @@ def main(args_dict: Union[Dict, None] = None):
             prepare_validation_features,
             batched=True,
             num_proc=data_args.preprocessing_num_workers,
-            remove_columns=column_names,
+            remove_columns=datasets["test"].column_names,
             load_from_cache_file=not data_args.overwrite_cache,
         )
         if data_args.max_test_samples is not None:
@@ -542,7 +533,7 @@ def main(args_dict: Union[Dict, None] = None):
         else:
             formatted_predictions = [{"id": k, "prediction_text": v} for k, v in predictions.items()]
 
-        references = [{"id": ex["id"], "answers": ex[answer_column_name]} for ex in examples]
+        references = [{"id": ex["id"], "answers": ex['answers']} for ex in examples]
         return EvalPrediction(predictions=formatted_predictions, label_ids=references)
 
     def compute_metrics(eval_predictions: EvalPrediction) -> Dict[str, float]:

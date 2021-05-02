@@ -8,15 +8,19 @@ def main(args):
         'do_train': True,
         'do_eval': True,
         'do_predict': True,
-        'train_file': str(args.dataset_root / 'squad-train.json'),
-        'validation_file': str(args.dataset_root / 'squad-train.json'),
-        'test_file': str(args.dataset_root / 'squad-test.json'),
+        'train_file': str(args.dataset_root / 'qa-train.json'),
+        'validation_file': str(args.dataset_root / 'qa-eval.json'),
+        'test_file': str(args.ns_prediction),
         'output_dir': args.output,
         'overwrite_output_dir': args.overwrite,
         'logging_dir': args.output / 'tensorboard_output',
-        'logging_strategy': 'epoch',
-        'evaluation_strategy': 'epoch',
-        'per_device_train_batch_size': 12,
+        # 'logging_strategy': 'step',
+        # 'logging_steps': 500,
+        # 'evaluation_strategy': 'step',  # do_eval is True if evaluation_strategy is not 'no'
+        # 'eval_steps': 500,
+        'save_total_limit': 3,
+        'per_device_train_batch_size': 16,
+        'per_device_eval_batch_size': 384,
         'learning_rate': args.lr,
         'num_train_epochs': args.epoch,
         'max_seq_length': 384,
@@ -38,6 +42,7 @@ if __name__ == '__main__':
     )
     parser.add_argument("--lr", type=float, default=3e-5)
     parser.add_argument("-n", "--epoch", type=int, default=2)
+    parser.add_argument("--ns_prediction", type=Path, help="Path to next_sentence prediction output.", required=True)
     args = parser.parse_args()
 
     # Check if argument combination is valid

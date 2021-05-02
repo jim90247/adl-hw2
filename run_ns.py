@@ -5,7 +5,7 @@ import os
 import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Dict, Generator, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import datasets
 import numpy as np
@@ -31,15 +31,15 @@ class HomeworkDatasetArguments:
     Arguments containing paths to original homework 2 datasets.
     """
 
-    raw_train_file: str = field(default='./dataset/train.json', metadata={'help': 'Homework 2 original train dataset'})
-
-    raw_public_file: str = field(
-        default='./dataset/public.json', metadata={'help': 'Homework 2 original public test dataset'}
+    raw_train_file: str = field(
+        default='./dataset/train.json', metadata={'help': 'Homework 2 original train dataset (train split)'}
     )
 
-    raw_private_file: str = field(
-        default='./dataset/private.json', metadata={'help': 'Homework 2 original private test dataset'}
+    raw_eval_file: str = field(
+        default='./dataset/eval.json', metadata={'help': 'Homework 2 original train dataset (validation split)'}
     )
+
+    raw_test_file: str = field(default='./dataset/public.json', metadata={'help': 'Homework 2 original test dataset'})
 
     context_file: str = field(default='./dataset/context.json', metadata={'help': 'Homework 2 context file'})
 
@@ -271,6 +271,15 @@ def run_next_sentence(args_dict: Union[Dict, None] = None):
 
     def compute_metrics(eval_pred: EvalPrediction):
         def raw_accuracy(eval_pred: EvalPrediction) -> float:
+            """Compute per-segment accuracy
+
+            Args:
+                eval_pred (EvalPrediction): the evaluate predictions
+
+            Returns:
+                float: per-segment accuracy
+            """
+
             pred_labels = np.argmax(eval_pred.predictions, axis=1)
             return sum(pred_labels == eval_pred.label_ids) / len(pred_labels)
 
@@ -311,6 +320,7 @@ def run_next_sentence(args_dict: Union[Dict, None] = None):
         trainer.save_metrics("train", metrics)
         trainer.save_state()
 
+    # Evaluation
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
         # metrics = trainer.evaluate()
@@ -329,7 +339,7 @@ def run_next_sentence(args_dict: Union[Dict, None] = None):
 
         # Compute end to end accuracy
         relevant_predictions = get_final_predictions(raw_predictions, eval_dataset)
-        with open(hw2_data_args.raw_public_file, encoding='utf-8') as f:
+        with open(hw2_data_args.raw_eval_file, encoding='utf-8') as f:
             raw_eval_dataset = json.load(f)
         metrics.update(get_end2end_accuracy(relevant_predictions, raw_eval_dataset))
 
@@ -342,15 +352,19 @@ def run_next_sentence(args_dict: Union[Dict, None] = None):
         raw_predictions = trainer.predict(
             copy.deepcopy(test_dataset)
         )  # trainer.predict() removes columns that model.forward() do not accept
+
+        logger.info('Extracting final predictions')
         final_predictions = get_final_predictions(raw_predictions, test_dataset)
 
-        with open(hw2_data_args.raw_private_file, encoding='utf-8') as f:
+        with open(hw2_data_args.raw_test_file, encoding='utf-8') as f:
             dataset = json.load(f)
 
         with open(hw2_data_args.context_file, encoding='utf-8') as f:
             contexts = json.load(f)
 
         qa_input = list(dump_predictions(final_predictions, dataset, contexts))
+
+        logger.info(f"Writing predictions to {hw2_data_args.qa_file}")
         with open(hw2_data_args.qa_file, 'w', encoding='utf-8') as f:
             json.dump({'data': qa_input}, f, ensure_ascii=False, indent=2)
 
@@ -448,6 +462,16 @@ def preprocess_dataset(
 
 
 def get_final_predictions(raw_predictions: PredictionOutput, preprocessed_dataset: Dataset) -> Dict[str, str]:
+    """Choose the corresponding paragraph of the segment with highest score (logits[0] - logits[1]).
+
+    Args:
+        raw_predictions (PredictionOutput): predictions returned from trainer.predict()
+        preprocessed_dataset (Dataset): preprocessed test dataset
+
+    Returns:
+        Dict[str, str]: question id to relevant paragraph id
+    """
+
     scores = defaultdict(lambda: ('', float('-inf')))  # {qid: (context_id, score)}
     for raw_pred, example in zip(raw_predictions.predictions, preprocessed_dataset):
         qid, context_id = example['id'].split('~')
@@ -474,4 +498,13 @@ def dump_predictions(predictions: Dict[str, str], dataset: List[Dict], contexts:
         if qid not in predictions:
             continue
         ctx_id = int(predictions[qid])
-        yield {'id': qid, 'question': entry['question'], 'context': contexts[ctx_id]}
+        yield {
+            'id': qid,
+            'question': entry['question'],
+            'context': contexts[ctx_id],
+            # keep an empty answer field for the convenience of QA post-processing
+            'answers': {
+                'answer_start': [],
+                'text': []
+            }
+        }

@@ -1,3 +1,4 @@
+from collections import defaultdict
 import json
 from argparse import ArgumentParser
 from typing import Dict, List
@@ -6,13 +7,12 @@ import tqdm
 import random
 
 
-def hw2_to_squad(dataset: List[Dict], contexts: List[str], include_answers: bool = True) -> List[Dict]:
+def hw2_to_squad(dataset: List[Dict], contexts: List[str]) -> List[Dict]:
     """Convert homework 2 dataset format to SQuAD 1.0 format.
 
     Args:
         dataset (List[Dict]): homework 2 dataset
         contexts (List[str]): homework 2 context file
-        include_answers (bool, optional): Whether to include answers in output. Calculating metrics requires answers. Defaults to True.
 
     Raises:
         ValueError: some required fields do not exist in some dataset entry.
@@ -45,7 +45,8 @@ def hw2_to_squad(dataset: List[Dict], contexts: List[str], include_answers: bool
             }
         }
 
-        if include_answers and entry.get('answers') is not None:
+        if 'answers' in entry:
+            squad_entry['answers'] = defaultdict(list)
             for answer in entry['answers']:
                 squad_entry['answers']['answer_start'].append(answer['start'])
                 squad_entry['answers']['text'].append(answer['text'])
@@ -61,10 +62,10 @@ def main(args):
     with open(args.contexts, encoding='utf-8') as f:
         contexts = json.load(f)
 
-    squad_dataset = hw2_to_squad(dataset, contexts, include_answers=args.answer)
-
     if args.count is not None:
-        squad_dataset = random.sample(squad_dataset, k=args.count)
+        dataset = random.sample(dataset, k=args.count)
+    
+    squad_dataset = hw2_to_squad(dataset, contexts)
 
     with open(args.output, 'w', encoding='utf-8') as f:
         json.dump({"data": squad_dataset}, f, ensure_ascii=False, indent=2)
@@ -76,6 +77,5 @@ if __name__ == '__main__':
     parser.add_argument('contexts')
     parser.add_argument('output')
     parser.add_argument('--count', type=int)
-    parser.add_argument('--answer', action='store_true', default=False)
     args = parser.parse_args()
     main(args)
