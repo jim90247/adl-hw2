@@ -1,4 +1,5 @@
 import json
+import random
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Dict, List
@@ -21,7 +22,7 @@ def main(args):
     with open(args.dataset, encoding='utf-8') as f:
         dataset = json.load(f)
         if args.count is not None:
-            dataset = dataset[:args.count]
+            dataset = random.sample(dataset, args.count)
     with open(args.context, encoding='utf-8') as f:
         contexts = json.load(f)
 
