@@ -21,6 +21,8 @@ def main(args):
         'logging_dir': args.output / 'tensorboard_output',
         'logging_strategy': 'epoch',
         'evaluation_strategy': 'epoch',  # do_eval is True if evaluation_strategy is not 'no'
+        'per_device_train_batch_size': 16,
+        'per_device_eval_batch_size': 128,
         'learning_rate': args.lr,
         'num_train_epochs': args.epoch,
         'max_seq_length': 384,
