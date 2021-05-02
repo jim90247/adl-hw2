@@ -7,16 +7,20 @@ def main(args):
         'model_name_or_path': args.model_path if args.model_name is None else args.model_name,
         'do_train': True,
         'do_eval': True,
-        'do_predict': True,
+        'do_predict': False,
+        # Datasets in preprocessed format
         'train_file': str(args.dataset_root / 'ns-train.json'),
-        'validation_file': str(args.dataset_root / 'ns-train.json'),
-        'test_file': str(args.dataset_root / 'ns-private.json'),
+        'validation_file': str(args.dataset_root / 'ns-eval.json'),
+        'test_file': str(args.dataset_root / 'ns-public.json'),
+        # Datasets in original format
+        'raw_train_file': str(args.dataset_root / 'train_.json'),
+        'raw_public_file': str(args.dataset_root / 'eval.json'),  # validation dataset, contains labels
+        'raw_private_file': str(args.dataset_root / 'public.json'),  # test dataset
         'output_dir': args.output,
         'overwrite_output_dir': args.overwrite,
         'logging_dir': args.output / 'tensorboard_output',
         'logging_strategy': 'epoch',
-        'evaluation_strategy': 'epoch',
-        'per_device_train_batch_size': 12,
+        'evaluation_strategy': 'epoch',  # do_eval is True if evaluation_strategy is not 'no'
         'learning_rate': args.lr,
         'num_train_epochs': args.epoch,
         'max_seq_length': 384,

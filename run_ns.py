@@ -31,7 +31,15 @@ class HomeworkDatasetArguments:
     Arguments containing paths to original homework 2 datasets.
     """
 
-    raw_test_file: str = field(default='./dataset/private.json', metadata={'help': 'Homework 2 original test dataset'})
+    raw_train_file: str = field(default='./dataset/train.json', metadata={'help': 'Homework 2 original train dataset'})
+
+    raw_public_file: str = field(
+        default='./dataset/public.json', metadata={'help': 'Homework 2 original public test dataset'}
+    )
+
+    raw_private_file: str = field(
+        default='./dataset/private.json', metadata={'help': 'Homework 2 original private test dataset'}
+    )
 
     context_file: str = field(default='./dataset/context.json', metadata={'help': 'Homework 2 context file'})
 
@@ -275,8 +283,8 @@ def run_next_sentence(args_dict: Union[Dict, None] = None):
     trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=train_dataset if training_args.do_train else None,
-        eval_dataset=eval_dataset if training_args.do_eval else None,
+        train_dataset=copy.deepcopy(train_dataset) if training_args.do_train else None,
+        eval_dataset=copy.deepcopy(eval_dataset) if training_args.do_eval else None,
         tokenizer=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
@@ -303,14 +311,27 @@ def run_next_sentence(args_dict: Union[Dict, None] = None):
         trainer.save_metrics("train", metrics)
         trainer.save_state()
 
-    # Unless we are not training, there's no need to run evaluation again here.
-    # Evaluation will be run after each training epoch.
-    if training_args.do_eval and not training_args.do_train:
+    if training_args.do_eval:
         logger.info("*** Evaluate ***")
-        metrics = trainer.evaluate()
+        # metrics = trainer.evaluate()
+        metrics = {}
 
         max_val_samples = data_args.max_val_samples if data_args.max_val_samples is not None else len(eval_dataset)
         metrics["eval_samples"] = min(max_val_samples, len(eval_dataset))
+
+        logger.info('Running prediction for end to end accuracy calculation')
+        raw_predictions = trainer.predict(
+            copy.deepcopy(eval_dataset)
+        )  # trainer.predict() removes columns that model.forward() do not accept
+
+        # Compute raw accuracy
+        metrics.update(compute_metrics(raw_predictions))
+
+        # Compute end to end accuracy
+        relevant_predictions = get_final_predictions(raw_predictions, eval_dataset)
+        with open(hw2_data_args.raw_public_file, encoding='utf-8') as f:
+            raw_eval_dataset = json.load(f)
+        metrics.update(get_end2end_accuracy(relevant_predictions, raw_eval_dataset))
 
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
@@ -323,7 +344,7 @@ def run_next_sentence(args_dict: Union[Dict, None] = None):
         )  # trainer.predict() removes columns that model.forward() do not accept
         final_predictions = get_final_predictions(raw_predictions, test_dataset)
 
-        with open(hw2_data_args.raw_test_file, encoding='utf-8') as f:
+        with open(hw2_data_args.raw_private_file, encoding='utf-8') as f:
             dataset = json.load(f)
 
         with open(hw2_data_args.context_file, encoding='utf-8') as f:
@@ -436,8 +457,21 @@ def get_final_predictions(raw_predictions: PredictionOutput, preprocessed_datase
     return {qid: p[0] for qid, p in scores.items()}
 
 
+def get_end2end_accuracy(predictions: Dict[str, str], dataset: List[Dict]):
+    total = 0
+    correct = 0
+    for entry in dataset:
+        if str(entry['id']) not in predictions:
+            continue
+        correct += int(entry['relevant'] == int(predictions[entry['id']]))
+        total += 1
+    return {'end2end_accuracy': correct / total if total > 0 else 0, 'end2end_correct': correct, 'end2end_total': total}
+
+
 def dump_predictions(predictions: Dict[str, str], dataset: List[Dict], contexts: List[str]):
     for entry in dataset:
         qid = entry['id']
+        if qid not in predictions:
+            continue
         ctx_id = int(predictions[qid])
         yield {'id': qid, 'question': entry['question'], 'context': contexts[ctx_id]}
