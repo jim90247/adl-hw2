@@ -1,3 +1,4 @@
+import json
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -39,6 +40,11 @@ def main(args):
 
     import run_ns
     run_ns.run_next_sentence(param_dict)
+
+    # Save wrapper parameters
+    with open(args.output / 'wrapper_param.json', 'w') as f:
+        str_param_dict = {k: str(v) for k, v in param_dict.items()}
+        json.dump(str_param_dict, f, indent=2)
 
 
 if __name__ == '__main__':
