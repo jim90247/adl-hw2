@@ -33,6 +33,9 @@ from transformers import (
     AutoConfig,
     AutoModelForQuestionAnswering,
     AutoTokenizer,
+    BertConfig,
+    BertForQuestionAnswering,
+    BertTokenizerFast,
     DataCollatorWithPadding,
     EvalPrediction,
     HfArgumentParser,
@@ -44,7 +47,6 @@ from transformers import (
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
 from utils_qa import postprocess_qa_predictions
-
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.5.0")
@@ -78,8 +80,9 @@ class ModelArguments:
     use_auth_token: bool = field(
         default=False,
         metadata={
-            "help": "Will use the token generated when running `transformers-cli login` (necessary to use this script "
-            "with private models)."
+            "help":
+                "Will use the token generated when running `transformers-cli login` (necessary to use this script "
+                "with private models)."
         },
     )
 
@@ -105,9 +108,7 @@ class DataTrainingArguments:
         default=None,
         metadata={"help": "An optional input test data file to evaluate the perplexity on (a text file)."},
     )
-    overwrite_cache: bool = field(
-        default=False, metadata={"help": "Overwrite the cached training and evaluation sets"}
-    )
+    overwrite_cache: bool = field(default=False, metadata={"help": "Overwrite the cached training and evaluation sets"})
     preprocessing_num_workers: Optional[int] = field(
         default=None,
         metadata={"help": "The number of processes to use for the preprocessing."},
@@ -115,37 +116,42 @@ class DataTrainingArguments:
     max_seq_length: int = field(
         default=384,
         metadata={
-            "help": "The maximum total input sequence length after tokenization. Sequences longer "
-            "than this will be truncated, sequences shorter will be padded."
+            "help":
+                "The maximum total input sequence length after tokenization. Sequences longer "
+                "than this will be truncated, sequences shorter will be padded."
         },
     )
     pad_to_max_length: bool = field(
         default=True,
         metadata={
-            "help": "Whether to pad all samples to `max_seq_length`. "
-            "If False, will pad the samples dynamically when batching to the maximum length in the batch (which can "
-            "be faster on GPU but will be slower on TPU)."
+            "help":
+                "Whether to pad all samples to `max_seq_length`. "
+                "If False, will pad the samples dynamically when batching to the maximum length in the batch (which can "
+                "be faster on GPU but will be slower on TPU)."
         },
     )
     max_train_samples: Optional[int] = field(
         default=None,
         metadata={
-            "help": "For debugging purposes or quicker training, truncate the number of training examples to this "
-            "value if set."
+            "help":
+                "For debugging purposes or quicker training, truncate the number of training examples to this "
+                "value if set."
         },
     )
     max_val_samples: Optional[int] = field(
         default=None,
         metadata={
-            "help": "For debugging purposes or quicker training, truncate the number of validation examples to this "
-            "value if set."
+            "help":
+                "For debugging purposes or quicker training, truncate the number of validation examples to this "
+                "value if set."
         },
     )
     max_test_samples: Optional[int] = field(
         default=None,
         metadata={
-            "help": "For debugging purposes or quicker training, truncate the number of test examples to this "
-            "value if set."
+            "help":
+                "For debugging purposes or quicker training, truncate the number of test examples to this "
+                "value if set."
         },
     )
     version_2_with_negative: bool = field(
@@ -154,9 +160,10 @@ class DataTrainingArguments:
     null_score_diff_threshold: float = field(
         default=0.0,
         metadata={
-            "help": "The threshold used to select the null answer: if the best answer has a score that is less than "
-            "the score of the null answer minus this threshold, the null answer is selected for this example. "
-            "Only useful when `version_2_with_negative=True`."
+            "help":
+                "The threshold used to select the null answer: if the best answer has a score that is less than "
+                "the score of the null answer minus this threshold, the null answer is selected for this example. "
+                "Only useful when `version_2_with_negative=True`."
         },
     )
     doc_stride: int = field(
@@ -170,17 +177,16 @@ class DataTrainingArguments:
     max_answer_length: int = field(
         default=30,
         metadata={
-            "help": "The maximum length of an answer that can be generated. This is needed because the start "
-            "and end predictions are not conditioned on one another."
+            "help":
+                "The maximum length of an answer that can be generated. This is needed because the start "
+                "and end predictions are not conditioned on one another."
         },
     )
 
     def __post_init__(self):
         if (
-            self.dataset_name is None
-            and self.train_file is None
-            and self.validation_file is None
-            and self.test_file is None
+            self.dataset_name is None and self.train_file is None and self.validation_file is None and
+            self.test_file is None
         ):
             raise ValueError("Need either a dataset name or a training/validation file/test_file.")
         else:
@@ -236,8 +242,8 @@ def main(args_dict: Union[Dict, None] = None):
 
     # Log on each process the small summary:
     logger.warning(
-        f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
-        + f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
+        f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}" +
+        f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
     )
     # Set the verbosity to info of the Transformers logger (on main process only):
     if is_main_process(training_args.local_rank):
@@ -270,12 +276,14 @@ def main(args_dict: Union[Dict, None] = None):
         if data_args.validation_file is not None:
             data_files_with_answers["validation"] = data_args.validation_file
 
-        datasets_with_answers = load_dataset('json', data_files=data_files_with_answers, field="data") if len(data_files_with_answers) > 0 else {}
+        datasets_with_answers = load_dataset('json', data_files=data_files_with_answers,
+                                             field="data") if len(data_files_with_answers) > 0 else {}
 
         data_files_without_answers = {}
         if data_args.test_file is not None:
             data_files_without_answers["test"] = data_args.test_file
-        datasets_without_answers = load_dataset('json', data_files=data_files_without_answers, field="data") if len(data_files_without_answers) > 0 else {}
+        datasets_without_answers = load_dataset('json', data_files=data_files_without_answers,
+                                                field="data") if len(data_files_without_answers) > 0 else {}
 
         datasets = {**datasets_with_answers, **datasets_without_answers}
     # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
@@ -292,7 +300,7 @@ def main(args_dict: Union[Dict, None] = None):
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
-    tokenizer = AutoTokenizer.from_pretrained(
+    tokenizer = BertTokenizerFast.from_pretrained(
         model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,
         use_fast=True,
@@ -505,9 +513,8 @@ def main(args_dict: Union[Dict, None] = None):
     # We have already padded to max length if the corresponding flag is True, otherwise we need to pad in the data
     # collator.
     data_collator = (
-        default_data_collator
-        if data_args.pad_to_max_length
-        else DataCollatorWithPadding(tokenizer, pad_to_multiple_of=8 if training_args.fp16 else None)
+        default_data_collator if data_args.pad_to_max_length else
+        DataCollatorWithPadding(tokenizer, pad_to_multiple_of=8 if training_args.fp16 else None)
     )
 
     # Post-processing:
@@ -528,7 +535,11 @@ def main(args_dict: Union[Dict, None] = None):
         # Format the result to the format the metric expects.
         if data_args.version_2_with_negative:
             formatted_predictions = [
-                {"id": k, "prediction_text": v, "no_answer_probability": 0.0} for k, v in predictions.items()
+                {
+                    "id": k,
+                    "prediction_text": v,
+                    "no_answer_probability": 0.0
+                } for k, v in predictions.items()
             ]
         else:
             formatted_predictions = [{"id": k, "prediction_text": v} for k, v in predictions.items()]

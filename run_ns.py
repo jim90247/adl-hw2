@@ -12,8 +12,20 @@ import numpy as np
 import transformers
 from datasets.arrow_dataset import Dataset
 from transformers import (
-    AutoConfig, AutoModelForNextSentencePrediction, AutoTokenizer, DataCollatorWithPadding, EvalPrediction,
-    HfArgumentParser, PreTrainedTokenizerFast, Trainer, TrainingArguments, default_data_collator, set_seed
+    AutoConfig,
+    AutoModelForNextSentencePrediction,
+    AutoTokenizer,
+    BertConfig,
+    BertForNextSentencePrediction,
+    BertTokenizerFast,
+    DataCollatorWithPadding,
+    EvalPrediction,
+    HfArgumentParser,
+    PreTrainedTokenizerFast,
+    Trainer,
+    TrainingArguments,
+    default_data_collator,
+    set_seed,
 )
 from transformers.tokenization_utils_base import BatchEncoding
 from transformers.trainer_utils import (PredictionOutput, get_last_checkpoint, is_main_process)
@@ -229,20 +241,20 @@ def run_next_sentence(args_dict: Union[Dict, None] = None):
     # Distributed training:
     # The .from_pretrained methods guarantee that only one local process can concurrently
     # download model & vocab.
-    config = AutoConfig.from_pretrained(
+    config = BertConfig.from_pretrained(
         model_args.config_name if model_args.config_name else model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
-    tokenizer = AutoTokenizer.from_pretrained(
+    tokenizer = BertTokenizerFast.from_pretrained(
         model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,
         use_fast=True,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
-    model = AutoModelForNextSentencePrediction.from_pretrained(
+    model = BertForNextSentencePrediction.from_pretrained(
         model_args.model_name_or_path,
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
         config=config,

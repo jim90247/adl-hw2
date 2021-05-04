@@ -20,10 +20,14 @@ def main(args):
         'qa_file': args.output / 'predictions.json',
         'overwrite_output_dir': args.overwrite,
         'logging_dir': args.output / 'tensorboard_output',
+        # logging, evaluation, saving will be conduct every gradient_accumulation_steps * xxx_step steps
+        'gradient_accumulation_steps': 1,
         'logging_strategy': 'steps',
         'logging_steps': 500,
         'evaluation_strategy': 'steps',  # do_eval is True if evaluation_strategy is not 'no'
         'eval_steps': 500,
+        'save_strategy': 'steps',
+        'save_steps': 1000,
         'save_total_limit': 3,
         'per_device_train_batch_size': 16,
         'per_device_eval_batch_size': 384,
