@@ -271,16 +271,16 @@ def main(args_dict: Union[Dict, None] = None):
         # Training and validation datasets have answers, but test dataset does not.
         # Therefore, we load them seperately, otherwise `load_dataset` will report errors.
         data_files_with_answers = {}
-        if data_args.train_file is not None:
+        if data_args.train_file is not None and training_args.do_train:
             data_files_with_answers["train"] = data_args.train_file
-        if data_args.validation_file is not None:
+        if data_args.validation_file is not None and training_args.do_eval:
             data_files_with_answers["validation"] = data_args.validation_file
 
         datasets_with_answers = load_dataset('json', data_files=data_files_with_answers,
                                              field="data") if len(data_files_with_answers) > 0 else {}
 
         data_files_without_answers = {}
-        if data_args.test_file is not None:
+        if data_args.test_file is not None and training_args.do_predict:
             data_files_without_answers["test"] = data_args.test_file
         datasets_without_answers = load_dataset('json', data_files=data_files_without_answers,
                                                 field="data") if len(data_files_without_answers) > 0 else {}

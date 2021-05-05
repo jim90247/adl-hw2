@@ -234,7 +234,7 @@ def run_next_sentence(args_dict: Union[Dict, None] = None):
     set_seed(training_args.seed)
 
     # Load homework 2 dataset from json files
-    datasets = load_dataset(data_args)
+    datasets = load_dataset(data_args, training_args)
 
     # Load pretrained model and tokenizer
     #
@@ -381,20 +381,20 @@ def run_next_sentence(args_dict: Union[Dict, None] = None):
             json.dump({'data': qa_input}, f, ensure_ascii=False, indent=2)
 
 
-def load_dataset(data_args: DataTrainingArguments) -> Dict[str, Dataset]:
+def load_dataset(data_args: DataTrainingArguments, training_args: TrainingArguments) -> Dict[str, Dataset]:
     # Training and validation datasets have labels, but test dataset does not.
     # Therefore, we load them seperately, otherwise `load_dataset` will report errors.
     data_files_with_labels = {}
-    if data_args.train_file is not None:
+    if data_args.train_file is not None and training_args.do_train:
         data_files_with_labels["train"] = data_args.train_file
-    if data_args.validation_file is not None:
+    if data_args.validation_file is not None and training_args.do_eval:
         data_files_with_labels["validation"] = data_args.validation_file
 
     datasets_with_answers = datasets.load_dataset('json', data_files=data_files_with_labels,
                                                   field="data") if len(data_files_with_labels) > 0 else {}
 
     data_files_without_labels = {}
-    if data_args.test_file is not None:
+    if data_args.test_file is not None and training_args.do_predict:
         data_files_without_labels["test"] = data_args.test_file
     datasets_without_answers = datasets.load_dataset('json', data_files=data_files_without_labels,
                                                      field="data") if len(data_files_without_labels) > 0 else {}

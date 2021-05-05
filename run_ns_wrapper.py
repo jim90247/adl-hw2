@@ -2,21 +2,24 @@ import json
 from argparse import ArgumentParser
 from pathlib import Path
 
+TASKS = ['train', 'eval', 'predict']
+
 
 def main(args):
     param_dict = {
         'model_name_or_path': args.model,
-        'do_train': True,
-        'do_eval': True,
-        'do_predict': True,
+        'do_train': 'train' in args.tasks,
+        'do_eval': 'eval' in args.tasks,
+        'do_predict': 'predict' in args.tasks,
         # Datasets in preprocessed format
         'train_file': str(args.dataset_root / 'ns-train.json'),
         'validation_file': str(args.dataset_root / 'ns-eval.json'),
-        'test_file': str(args.dataset_root / 'ns-public.json'),
+        'test_file': str(args.test_input),
         # Datasets in original format
+        'context_file': str(args.context),
         'raw_train_file': str(args.dataset_root / 'train_.json'),
         'raw_eval_file': str(args.dataset_root / 'eval.json'),  # validation dataset, contains labels
-        'raw_test_file': str(args.dataset_root / 'public.json'),  # test dataset
+        'raw_test_file': str(args.raw_test_input),  # test dataset
         'output_dir': args.output,
         'qa_file': args.output / 'predictions.json',
         'overwrite_output_dir': args.overwrite,
@@ -25,7 +28,8 @@ def main(args):
         'gradient_accumulation_steps': 1,
         'logging_strategy': 'steps',
         'logging_steps': 500,
-        'evaluation_strategy': 'steps',  # do_eval is True if evaluation_strategy is not 'no'
+        # do_eval is True if evaluation_strategy is not 'no'
+        'evaluation_strategy': 'steps' if 'eval' in args.tasks else 'no',
         'eval_steps': 500,
         'save_strategy': 'steps',
         'save_steps': 1000,
@@ -50,7 +54,11 @@ def main(args):
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument("model", help="Name of the model (download from huggingface) or path to local model directory.")
+    parser.add_argument("--tasks", help="Comma seperated list of tasks to perform.", required=True)
     parser.add_argument("--dataset_root", type=Path, default=Path('dataset'))
+    parser.add_argument("--context", help="Path to context file", type=Path, required=True)
+    parser.add_argument("--test_input", help="Path to test dataset", type=Path, required=True)
+    parser.add_argument("--raw_test_input", help="Path to unpreprocessed test dataset", type=Path, required=True)
     parser.add_argument("-o", "--output", help="output directory", required=True, type=Path)
     parser.add_argument(
         "--overwrite", help="Overwrite output directory contents when it exists.", action='store_true', default=False
@@ -58,5 +66,9 @@ if __name__ == '__main__':
     parser.add_argument("--lr", type=float, default=3e-5)
     parser.add_argument("-n", "--epoch", type=int, default=2)
     args = parser.parse_args()
+
+    args.tasks = args.tasks.split(',')
+    if not all(task in TASKS for task in args.tasks):
+        raise ValueError(f"{args.tasks} contains unknown tasks.")
 
     main(args)
