@@ -14,7 +14,7 @@ function abort_exec() {
 }
 
 if [ "$#" -lt 3 ]; then
-    abort_exec "${0} requires three arguments: dataset, context and prediction output."
+    abort_exec "${0} requires three arguments: context, dataset and prediction output."
 fi
 
 CONTEXT="$1"
