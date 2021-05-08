@@ -29,7 +29,7 @@ NS_INPUT_DATASET="${DATASET}_ns_preprocessed_${RUN_ID}.json"
 NS_OUTPUT="$(pwd)/next_sentence_output_${RUN_ID}"
 
 QA_TASKS="${QA_TASKS:-"predict"}"
-QA_MODEL_CKPT="ckpt/qa-chinese-roberta-wwm-ext_full-train"
+QA_MODEL_CKPT="ckpt/qa-chinese-roberta-wwm-ext"
 QA_INPUT_DATASET="${NS_OUTPUT}/predictions.json"
 QA_OUTPUT="$(pwd)/question_answering_output_${RUN_ID}"
 

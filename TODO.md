@@ -1,10 +1,10 @@
 # TODO
 
 - [ ] `run.sh`
-- [ ] `download.sh`
+- [x] `download.sh`
 - [ ] public and private predictions (optional)
 - [ ] `README.md`
-- [ ] `report.pdf`
+- [x] `report.pdf`
 
 ## Download script
 
@@ -18,8 +18,8 @@ File size should be less than 4G and should finish within 1 hour.
 
 Subtasks
 
-- [ ] Upload model to Dropbox
-- [ ] Complete scripts
+- [x] Upload model to Dropbox
+- [x] Complete scripts
 
 ## Run script
 
@@ -47,17 +47,17 @@ Write down the command to train the model.
 
 Subtasks
 
-- [ ] data processing
-  - [ ] describe how tokenizer works
-  - [ ] answer span
-    - [ ] How did you convert the answer span start/end position on characters to position on tokens after BERT tokenization?
-    - [ ] After your model predicts the probability of answer span start/end position, what rules did you apply to determine the final start/end position?
-- [ ] Modeling
-  - [ ] describe model and its performance, loss function used, optimization algorithm, learning rate and batch size
-  - [ ] another pretrained model (chinese-roberta-wwm-ext in my case) and its performance, the difference between the first model and this one
-- [ ] Curves (create a validation set from training dataset)
-  - [ ] em
-  - [ ] f1
-- [ ] Pretrained vs non-pretrained
-  - [ ] configuration of the model and how to train it
-  - [ ] performance of this model v.s. BERT
+- [x] data processing
+  - [x] describe how tokenizer works
+  - [x] answer span
+    - [x] How did you convert the answer span start/end position on characters to position on tokens after BERT tokenization?
+    - [x] After your model predicts the probability of answer span start/end position, what rules did you apply to determine the final start/end position?
+- [x] Modeling
+  - [x] describe model and its performance, loss function used, optimization algorithm, learning rate and batch size
+  - [x] another pretrained model (chinese-roberta-wwm-ext in my case) and its performance, the difference between the first model and this one
+- [x] Curves (create a validation set from training dataset)
+  - [x] em
+  - [x] f1
+- [x] Pretrained vs non-pretrained
+  - [x] configuration of the model and how to train it
+  - [x] performance of this model v.s. BERT
