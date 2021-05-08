@@ -18,16 +18,16 @@ def main(args):
         'overwrite_output_dir': args.overwrite,
         'logging_dir': args.output / 'tensorboard_output',
         # logging, evaluation, saving will be conduct every gradient_accumulation_steps * xxx_step steps
-        'gradient_accumulation_steps': 1,
+        'gradient_accumulation_steps': int(96 / (args.ngpus * args.per_device_train_batch_size)),
         'logging_strategy': 'steps',
         'logging_steps': 300,
         # do_eval is True if evaluation_strategy is not 'no'
         'evaluation_strategy': 'steps' if 'eval' in args.tasks else 'no',
         'eval_steps': 300,
-        'save_strategy': 'steps',
+        'save_strategy': 'no',
         'save_steps': 600,
         'save_total_limit': 3,
-        'per_device_train_batch_size': 16,
+        'per_device_train_batch_size': args.per_device_train_batch_size,
         'per_device_eval_batch_size': 128,
         'learning_rate': args.lr,
         'num_train_epochs': args.epoch,
@@ -57,12 +57,18 @@ if __name__ == '__main__':
         "--overwrite", help="Overwrite output directory contents when it exists.", action='store_true', default=False
     )
     parser.add_argument("--lr", type=float, default=3e-5)
-    parser.add_argument("-n", "--epoch", type=int, default=2)
+    parser.add_argument("-n", "--epoch", type=int, default=5)
     parser.add_argument("--fp16", action='store_true', default=False)
+    parser.add_argument("--ngpus", type=int, default=6)
+    parser.add_argument("--per_device_train_batch_size", type=int, default=16)
     args = parser.parse_args()
 
     args.tasks = args.tasks.split(',')
     if not all(task in TASKS for task in args.tasks):
         raise ValueError(f"{args.tasks} contains unknown tasks.")
+    if args.ngpus < 1:
+        raise ValueError("GPU number should at least 1.")
+    if args.per_device_train_batch_size < 1:
+        raise ValueError("Per GPU batch size should be at least 1.")
 
     main(args)
